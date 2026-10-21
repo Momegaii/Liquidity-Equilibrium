@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>Liquidity Equilibrium</title>
+  <!-- Chart.js for clean plotting -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ---------- RESET & BASE ---------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-deep: #0a0f0a;
+      --bg-surface: #111812;
+      --bg-card: #17201a;
+      --bg-card-hover: #1c2a1e;
+      --border-subtle: #1f2e21;
+      --border-accent: #2a4a2e;
+      --text-primary: #e8f0e8;
+      --text-secondary: #8aaa8e;
+      --text-muted: #5a7a5e;
+      --green-bright: #4ade80;
+      --green-mid: #22c55e;
+      --green-dark: #166534;
+      --green-glow: #4ade8033;
+      --lime: #a3e635;
+      --lime-glow: #a3e63522;
+      --red: #ef4444;
+      --red-glow: #ef444422;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --font: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      padding: 1.5rem 1.25rem 2.5rem;
+      line-height: 1.5;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 50% -10%, #22c55e08, transparent),
+        radial-gradient(ellipse 40% 30% at 90% 100%, #a3e63506, transparent);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* ---------- HEADER ---------- */
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.6rem 1rem;
+      margin-bottom: 0.35rem;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 5vw, 2.1rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    h1 .accent {
+      color: var(--lime);
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.65rem;
+      border-radius: 40px;
+      background: var(--green-dark);
+      color: var(--green-bright);
+      border: 1px solid var(--border-accent);
+      white-space: nowrap;
+    }
+
+    .live-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green-bright);
+      box-shadow: 0 0 6px var(--green-bright);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .subhead {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 1.75rem;
+      padding-left: 0.9rem;
+      border-left: 3px solid var(--green-mid);
+      line-height: 1.4;
+    }
+
+    /* ---------- SETTINGS PANEL ---------- */
+    .settings-panel {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1.4rem 1.25rem 1.25rem;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 1rem 0.85rem;
+    }
+
+    .input-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .input-item label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .input-item input {
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: var(--font);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .input-item input:focus {
+      outline: none;
+      border-color: var(--green-mid);
+      box-shadow: 0 0 0 3px var(--green-glow);
+    }
+
+    .input-item input[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    .input-item input::-webkit-outer-spin-button,
+    .input-item input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .settings-footer {
+      margin-top: 1.15rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .settings-footer .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 0.25rem 0.6rem;
+      border-radius: 40px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.7rem;
+    }
+
+    .settings-footer .chip strong {
+      color: var(--lime);
+      font-weight: 700;
+    }
+
+    /* ---------- METRICS ---------- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.05rem 0.95rem;
+      border: 1px solid var(--border-subtle);
+      transition: border-color 0.15s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card:hover {
+      border-color: var(--border-accent);
+    }
+
+    .metric-card.highlight {
+      border-left: 3px solid var(--green-mid);
+      background: linear-gradient(135deg, var(--bg-card) 0%, #152216 100%);
+    }
+
+    .metric-card.highlight::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle at top right, var(--green-glow), transparent 70%);
+      pointer-events: none;
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.45rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .metric-value {
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      line-height: 1.15;
+      margin-bottom: 0.2rem;
+      word-break: break-word;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-value .unit {
+      font-size: 0.65em;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 0.2em;
+    }
+
+    .metric-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      padding-top: 0.4rem;
+      margin-top: 0.35rem;
+      border-top: 1px solid var(--border-subtle);
+      line-height: 1.4;
+    }
+
+    .usd-tag {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 6px;
+      background: var(--lime-glow);
+      color: var(--lime);
+      margin-left: 0.3rem;
+      letter-spacing: 0.02em;
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.18rem 0.5rem;
+      border-radius: 40px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .badge.positive {
+      background: var(--green-glow);
+      color: var(--green-bright);
+      border: 1px solid var(--border-accent);
+    }
+
+    .badge.negative {
+      background: var(--red-glow);
+      color: var(--red);
+      border: 1px solid #4a2020;
+    }
+
+    /* ---------- CHARTS ---------- */
+    .plots-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1rem 0.8rem;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.02em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .chart-title .hint {
+      font-size: 0.62rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 150px;
+      width: 100%;
+      margin-bottom: 0.3rem;
+    }
+
+    canvas {
+      display: block;
+      max-width: 100%;
+    }
+
+    /* ---------- TABLE ---------- */
+    .df-preview {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: 1.2rem 1.1rem 0.7rem;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .df-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      min-width: 480px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th {
+      text-align: right;
+      padding: 0.6rem 0.6rem;
+      background: var(--bg-deep);
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    th:first-child {
+      text-align: left;
+      border-radius: 8px 0 0 8px;
+    }
+
+    th:last-child {
+      border-radius: 0 8px 8px 0;
+    }
+
+    td {
+      padding: 0.65rem 0.6rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    td:first-child {
+      text-align: left;
+      font-weight: 700;
+      color: var(--lime);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .usd-cell {
+      color: var(--green-bright);
+      font-weight: 600;
+    }
+
+    /* ---------- FOOTNOTE ---------- */
+    .footnote {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: center;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 1.1rem;
+      line-height: 1.5;
+    }
+
+    /* ---------- RESPONSIVE ---------- */
+    @media (max-width: 900px) {
+      .plots-row {
+        grid-template-columns: 1fr;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 1.1rem 0.8rem 2rem;
+      }
+      .settings-panel {
+        padding: 1.1rem 0.9rem;
+      }
+      .input-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem 0.6rem;
+      }
+      .input-item input {
+        padding: 0.5rem 0.55rem;
+        font-size: 0.85rem;
+      }
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.7rem;
+      }
+      .metric-card {
+        padding: 0.9rem 0.8rem 0.8rem;
+      }
+      .metric-value {
+        font-size: 1.3rem;
+      }
+      .metric-sub {
+        font-size: 0.66rem;
+      }
+      .chart-container {
+        height: 130px;
+      }
+      .plots-row {
+        gap: 0.8rem;
+      }
+      .df-preview {
+        padding: 1rem 0.7rem 0.5rem;
+      }
+      table {
+        font-size: 0.72rem;
+        min-width: 420px;
+      }
+      th, td {
+        padding: 0.5rem 0.45rem;
+      }
+      .header {
+        gap: 0.4rem 0.6rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .input-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem 0.5rem;
+      }
+      .input-item label {
+        font-size: 0.6rem;
+      }
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .metric-card {
+        padding: 0.85rem 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>
+      <span>Liquidity <span class="accent">Equilibrium</span></span>
+    </h1>
+    <span class="live-badge"><span class="dot"></span> Live Model</span>
+  </div>
+  <div class="subhead">
+    Escalation per 25×accounts EC · glint net & sales · USD conversion · real-time multipliers
+  </div>
+
+  <!-- settings / inputs -->
+  <div class="settings-panel">
+    <div class="input-grid">
+      <div class="input-item">
+        <label>spsw</label>
+        <input type="number" id="spsw" value="1.2" step="0.1" min="0" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>wr</label>
+        <input type="number" id="wr" value="0.55" step="0.01" min="0" max="1" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>gimm</label>
+        <input type="number" id="gimm" value="10" step="1" min="0" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>g_eos</label>
+        <input type="number" id="g_eos" value="8" step="1" min="0" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>EC/battle</label>
+        <input type="number" id="ec_cost" value="10" step="1" min="0" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>battles/day</label>
+        <input type="number" id="b" value="30" step="1" min="0" inputmode="numeric">
+      </div>
+      <div class="input-item">
+        <label>free battles</label>
+        <input type="number" id="free" value="5" step="1" min="0" inputmode="numeric">
+      </div>
+      <div class="input-item">
+        <label>days</label>
+        <input type="number" id="day" value="30" step="1" min="1" inputmode="numeric">
+      </div>
+      <div class="input-item">
+        <label>accounts</label>
+        <input type="number" id="accounts" value="4" step="1" min="1" inputmode="numeric">
+      </div>
+      <div class="input-item">
+        <label>escal. factor</label>
+        <input type="number" id="escalation" value="1.5" step="0.1" min="1" inputmode="decimal">
+      </div>
+      <div class="input-item">
+        <label>scrolls (sales)</label>
+        <input type="number" id="scrolls" value="520" step="10" min="0" inputmode="numeric">
+      </div>
+      <div class="input-item">
+        <label>USD per SPS</label>
+        <input type="number" id="usd_per_sps" value="0.05" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
+    <div class="settings-footer">
+      <span class="chip">⚡ step = 25 × accounts → <strong id="stepDisplay">100</strong> EC</span>
+      <span class="chip">💵 <strong id="usdRateDisplay">$0.05</strong> / SPS</span>
+    </div>
+  </div>
+
+  <!-- metric cards -->
+  <div class="metrics-grid" id="metricsContainer"></div>
+
+  <!-- charts row -->
+  <div class="plots-row">
+    <div class="chart-card">
+      <div class="chart-title">SPS earnings <span class="hint">× multiplier</span></div>
+      <div class="chart-container"><canvas id="chartSps"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Glint net <span class="hint">× multiplier</span></div>
+      <div class="chart-container"><canvas id="chartGlint"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Sales <span class="hint">× multiplier</span></div>
+      <div class="chart-container"><canvas id="chartSales"></canvas></div>
+    </div>
+  </div>
+
+  <!-- dataframe table -->
+  <div class="df-preview">
+    <div class="df-title">📊 Multiplier breakdown</div>
+    <table id="dfTable">
+      <thead>
+        <tr>
+          <th>multiplier</th>
+          <th>sps</th>
+          <th>glint</th>
+          <th>sales</th>
+          <th>sps (USD)</th>
+        </tr>
+      </thead>
+      <tbody id="dfBody"></tbody>
+    </table>
+  </div>
+
+  <div class="footnote">
+    glint net includes EOS · reserve & days-until-zero based on current net daily · all values real-time
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ---------- DOM refs ----------
+    const inputs = {
+      spsw: document.getElementById('spsw'),
+      wr: document.getElementById('wr'),
+      gimm: document.getElementById('gimm'),
+      g_eos: document.getElementById('g_eos'),
+      ec_cost: document.getElementById('ec_cost'),
+      b: document.getElementById('b'),
+      free: document.getElementById('free'),
+      day: document.getElementById('day'),
+      accounts: document.getElementById('accounts'),
+      escalation: document.getElementById('escalation'),
+      scrolls: document.getElementById('scrolls'),
+      usd_per_sps: document.getElementById('usd_per_sps'),
+    };
+
+    const stepDisplay = document.getElementById('stepDisplay');
+    const usdRateDisplay = document.getElementById('usdRateDisplay');
+    const metricsContainer = document.getElementById('metricsContainer');
+    const dfBody = document.getElementById('dfBody');
+
+    // charts instances
+    let chartSps, chartGlint, chartSales;
+
+    // ---------- helper ----------
+    const val = (id) => {
+      const el = inputs[id];
+      let n = parseFloat(el.value);
+      return isNaN(n) ? 0 : n;
+    };
+
+    // ---------- core class ----------
+    class Liq {
+      constructor({
+        spsw, wr, gimm, g_eos, ec_cost_per_battle, b, free, day,
+        accounts = 4, escalation_factor = 1.5
+      }) {
+        this.spsw = spsw;
+        this.wr = wr;
+        this.gimm = gimm;
+        this.g_eos = g_eos;
+        this.ec_cost_per_battle = ec_cost_per_battle;
+        this.b = b;
+        this.free = free;
+        this.day = day;
+
+        this.accounts = accounts;
+        this.escalation_step = 25 * this.accounts;
+        this.escalation_factor = escalation_factor;
+      }
+
+      wins_per_day() { return this.b * this.wr; }
+      paid_battles_per_day() { return Math.max(0, this.b - this.free); }
+      calc_sps_per_day() { return this.wins_per_day() * this.spsw; }
+      calc_sps() { return this.calc_sps_per_day() * this.day; }
+
+      calc_ec_cost(paid_battles) {
+        if (paid_battles <= 0) return 0.0;
+        const base = this.ec_cost_per_battle;
+        const step = this.escalation_step;
+        const factor = this.escalation_factor;
+
+        let total = 0.0;
+        let remaining = paid_battles;
+        let tier = 0;
+
+        while (remaining > 0) {
+          const batch = Math.min(step, remaining);
+          const tier_cost = base * Math.pow(factor, tier);
+          total += batch * tier_cost;
+          remaining -= batch;
+          tier += 1;
+        }
+        return total;
+      }
+
+      calc_g_breakdown() {
+        const wins_d = this.wins_per_day();
+        const paid_d = this.paid_battles_per_day();
+
+        const imm_daily = wins_d * this.gimm;
+        const cost_daily = this.calc_ec_cost(paid_d);
+        const net_daily = imm_daily - cost_daily;
+        const eos_daily = wins_d * this.g_eos;
+
+        const season_net = (net_daily * this.day) + (eos_daily * this.day);
+
+        return {
+          wins_per_day: wins_d,
+          paid_battles_per_day: paid_d,
+          imm_daily,
+          cost_daily,
+          net_daily,
+          eos_daily,
+          season_net,
+        };
+      }
+
+      calc_g() { return this.calc_g_breakdown().season_net; }
+
+      is_glint_positive() { return this.calc_g_breakdown().net_daily >= 0; }
+
+      days_until_glint_zero(reserve) {
+        const net_daily = this.calc_g_breakdown().net_daily;
+        if (net_daily >= 0) return Infinity;
+        return reserve / Math.abs(net_daily);
+      }
+
+      required_reserve(buffer = 0.0) {
+        const net_daily = this.calc_g_breakdown().net_daily;
+        if (net_daily >= 0) return 0.0;
+        const raw = Math.abs(net_daily) * this.day;
+        return raw * (1 + buffer);
+      }
+
+      Sales(scrolls = 520.0) {
+        const common = 5, rare = 5, epic = 5, legendary = 2;
+        const sell5 = common * 0.05 + rare * 0.25 + epic * 0.39 + legendary * 1.5;
+        return sell5 * (scrolls / 5);
+      }
+
+      dt(scrolls = 520.0) {
+        const sps = this.calc_sps();
+        const glint = this.calc_g();
+        const sales = this.Sales(scrolls);
+        const multipliers = [1, 2, 3, 5];
+        return multipliers.map(m => ({
+          multiplier: m,
+          sps: sps * m,
+          glint: glint * m,
+          sales: sales * m,
+        }));
+      }
+    }
+
+    // ---------- update UI ----------
+    function updateAll() {
+      const spsw = val('spsw');
+      const wr = val('wr');
+      const gimm = val('gimm');
+      const g_eos = val('g_eos');
+      const ec_cost = val('ec_cost');
+      const b = val('b');
+      const free = val('free');
+      const day = Math.max(1, val('day'));
+      const accounts = Math.max(1, val('accounts'));
+      const escalation_factor = Math.max(1, val('escalation'));
+      const scrolls = Math.max(0, val('scrolls'));
+      const usd_per_sps = Math.max(0, val('usd_per_sps'));
+
+      stepDisplay.textContent = `${25 * accounts}`;
+      usdRateDisplay.textContent = `$${usd_per_sps.toFixed(2)}`;
+
+      const liq = new Liq({
+        spsw, wr, gimm, g_eos,
+        ec_cost_per_battle: ec_cost,
+        b, free, day,
+        accounts,
+        escalation_factor,
+      });
+
+      const bd = liq.calc_g_breakdown();
+      const sps = liq.calc_sps();
+      const glint = liq.calc_g();
+      const sales = liq.Sales(scrolls);
+      const sps_usd = sps * usd_per_sps;
+      const sps_daily_usd = liq.calc_sps_per_day() * usd_per_sps;
+
+      const netDaily = bd.net_daily;
+      const isPositive = netDaily >= 0;
+
+      const testReserve = 1000;
+      const daysZero = liq.days_until_glint_zero(testReserve);
+      const reserveRequired = liq.required_reserve(0.0);
+
+      // ---------- METRIC CARDS ----------
+      const cards = [
+        {
+          label: 'SPS Total',
+          value: sps.toFixed(1),
+          sub: `daily: ${liq.calc_sps_per_day().toFixed(2)} · <span class="usd-tag">$${sps_usd.toFixed(2)}</span>`,
+          highlight: true,
+          badge: null,
+        },
+        {
+          label: 'Glint Net Season',
+          value: glint.toFixed(1),
+          sub: `daily net: ${netDaily.toFixed(2)}`,
+          highlight: true,
+          badge: isPositive
+            ? { text: '✓ positive', class: 'positive' }
+            : { text: '⚠ negative', class: 'negative' },
+        },
+        {
+          label: 'Sales Scrolls',
+          value: sales.toFixed(1),
+          sub: `scrolls: ${scrolls} · per 5: ${liq.Sales(5).toFixed(2)}`,
+          highlight: true,
+          badge: null,
+        },
+        {
+          label: 'SPS Value (USD)',
+          value: `$${sps_usd.toFixed(2)}`,
+          sub: `rate: $${usd_per_sps.toFixed(2)} / SPS · daily: $${sps_daily_usd.toFixed(2)}`,
+          highlight: true,
+          badge: null,
+        },
+        {
+          label: 'EC Cost / Day',
+          value: bd.cost_daily.toFixed(1),
+          sub: `paid battles: ${bd.paid_battles_per_day}`,
+          highlight: false,
+          badge: null,
+        },
+        {
+          label: 'Immortal Glint / Day',
+          value: bd.imm_daily.toFixed(1),
+          sub: `wins/day: ${bd.wins_per_day.toFixed(1)}`,
+          highlight: false,
+          badge: null,
+        },
+        {
+          label: 'Required Reserve',
+          value: reserveRequired.toFixed(1),
+          sub: netDaily < 0 ? `for ${day} days (negative net)` : 'no reserve needed',
+          highlight: false,
+          badge: netDaily < 0
+            ? { text: 'deficit', class: 'negative' }
+            : { text: 'safe', class: 'positive' },
+        },
+        {
+          label: 'Days Until Zero',
+          value: daysZero === Infinity ? '∞' : daysZero.toFixed(1),
+          sub: `reserve: 1000 glint`,
+          highlight: false,
+          badge: null,
+        },
+      ];
+
+      metricsContainer.innerHTML = cards.map(c => `
+        <div class="metric-card ${c.highlight ? 'highlight' : ''}">
+          <div class="metric-label">${c.label}</div>
+          <div class="metric-value">${c.value}</div>
+          <div class="metric-sub">
+            ${c.sub}
+            ${c.badge ? `<span class="badge ${c.badge.class}" style="margin-left:0.35rem;">${c.badge.text}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      // ---------- DATAFRAME TABLE ----------
+      const rows = liq.dt(scrolls);
+      dfBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>×${r.multiplier}</td>
+          <td>${r.sps.toFixed(2)}</td>
+          <td>${r.glint.toFixed(2)}</td>
+          <td>${r.sales.toFixed(2)}</td>
+          <td class="usd-cell">$${(r.sps * usd_per_sps).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      // ---------- CHARTS ----------
+      const multipliers = [1, 2, 3, 5];
+      const spsData = multipliers.map(m => sps * m);
+      const glintData = multipliers.map(m => glint * m);
+      const salesData = multipliers.map(m => sales * m);
+
+      if (chartSps) chartSps.destroy();
+      if (chartGlint) chartGlint.destroy();
+      if (chartSales) chartSales.destroy();
+
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#17201a',
+            titleColor: '#a3e635',
+            bodyColor: '#e8f0e8',
+            borderColor: '#2a4a2e',
+            borderWidth: 1,
+            callbacks: { label: (ctx) => ` ${ctx.parsed.y.toFixed(1)}` }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: '#1f2e21' },
+            ticks: { font: { size: 9 }, color: '#5a7a5e' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 9 }, color: '#5a7a5e' }
+          }
+        },
+        elements: { point: { radius: 3, hoverRadius: 5 } }
+      };
+
+      chartSps = new Chart(document.getElementById('chartSps'), {
+        type: 'line',
+        data: {
+          labels: multipliers.map(m => '×' + m),
+          datasets: [{
+            data: spsData,
+            borderColor: '#4ade80',
+            backgroundColor: '#4ade8018',
+            borderWidth: 2,
+            pointBackgroundColor: '#4ade80',
+            fill: true,
+            tension: 0.25,
+          }]
+        },
+        options: commonOptions,
+      });
+
+      chartGlint = new Chart(document.getElementById('chartGlint'), {
+        type: 'line',
+        data: {
+          labels: multipliers.map(m => '×' + m),
+          datasets: [{
+            data: glintData,
+            borderColor: '#a3e635',
+            backgroundColor: '#a3e63518',
+            borderWidth: 2,
+            pointBackgroundColor: '#a3e635',
+            fill: true,
+            tension: 0.25,
+          }]
+        },
+        options: commonOptions,
+      });
+
+      chartSales = new Chart(document.getElementById('chartSales'), {
+        type: 'line',
+        data: {
+          labels: multipliers.map(m => '×' + m),
+          datasets: [{
+            data: salesData,
+            borderColor: '#22c55e',
+            backgroundColor: '#22c55e18',
+            borderWidth: 2,
+            pointBackgroundColor: '#22c55e',
+            fill: true,
+            tension: 0.25,
+          }]
+        },
+        options: commonOptions,
+      });
+    }
+
+    // ---------- attach listeners ----------
+    Object.values(inputs).forEach(inp => {
+      inp.addEventListener('input', updateAll);
+      inp.addEventListener('change', updateAll);
+    });
+
+    // initial render
+    updateAll();
+  })();
+</script>
+</body>
+</html>
